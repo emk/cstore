@@ -18,7 +18,7 @@ func assertResponseBody(t *testing.T, expected string, r *http.Response) {
 	if err != nil {
 		t.Fatalf("Can't read stream from %v: %v", r, err)
 	}
-	assertStringsEqual(t, "Testing.\n", string(body))
+	assertStringsEqual(t, expected, string(body))
 }
 
 func TestServer(t *testing.T) {
