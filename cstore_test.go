@@ -24,10 +24,10 @@ func assertResponseBody(t *testing.T, expected string, r *http.Response) {
 func TestServer(t *testing.T) {
 	// Create a new server.
 	server := httptest.NewServer(NewHandler())
-        defer server.Close()
+	defer server.Close()
 
 	// Make sure it returns something when called.
-        client := new(http.Client)
+	client := new(http.Client)
 	r, err := client.Get(server.URL)
 	if err != nil {
 		t.Fatalf("Can't GET %s: %v", server.URL, err)
@@ -35,5 +35,5 @@ func TestServer(t *testing.T) {
 	defer r.Body.Close()
 
 	// Read the HTTP result and compare it.
-        assertResponseBody(t, "Testing.\n", r)
+	assertResponseBody(t, "Testing.\n", r)
 }
