@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 )
 
-func assertStringsEqual(t *testing.T, expected string, got string) {
+func assertStringsEqual(t *testing.T, expected, got string) {
 	if expected != got {
 		t.Errorf("Expected %v, got %v", expected, got)
 	}
@@ -16,9 +16,20 @@ func assertStringsEqual(t *testing.T, expected string, got string) {
 func assertResponseBody(t *testing.T, expected string, r *http.Response) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		t.Fatalf("Can't read stream from %v: %v", r, err)
+		t.Errorf("Can't read stream from %v: %v", r, err)
+		return
 	}
 	assertStringsEqual(t, expected, string(body))
+}
+
+func assertHttpGet(t *testing.T, client http.Client, expected, url string) {
+	r, err := client.Get(url)
+	if err != nil {
+		t.Errorf("Can't GET %s: %v", url, err)
+		return
+	}
+	defer r.Body.Close()
+	assertResponseBody(t, expected, r)
 }
 
 func TestServer(t *testing.T) {
@@ -28,12 +39,5 @@ func TestServer(t *testing.T) {
 
 	// Make sure it returns something when called.
 	client := new(http.Client)
-	r, err := client.Get(server.URL)
-	if err != nil {
-		t.Fatalf("Can't GET %s: %v", server.URL, err)
-	}
-	defer r.Body.Close()
-
-	// Read the HTTP result and compare it.
-	assertResponseBody(t, "Testing.\n", r)
+	assertHttpGet(t, client, "Testing.\n", server.URL)
 }
