@@ -74,9 +74,10 @@ func TestServer(t *testing.T) {
 
 	client := new(http.Client)
 
-	// GET serveral invalid URLs.
+	// GET and PUT serveral invalid URLs.
 	assertHttpGetStatus(t, client, http.StatusForbidden, server.URL+"/foo")
 	assertHttpGetStatus(t, client, http.StatusForbidden, server.URL+"/---")
+	assertHttpPutStatus(t, client, http.StatusForbidden, server.URL+"/foo", "data")
 
 	// GET an unknown digest.
 	assertHttpGetStatus(t, client, http.StatusNotFound, url)
