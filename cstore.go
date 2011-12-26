@@ -16,7 +16,7 @@ var (
 
 type handler struct {
 	content map[string][]byte
-	locker sync.Locker
+	locker  sync.Locker
 }
 
 // Safely store content in our hash table.
@@ -46,7 +46,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if len(digest) != 64 {
 		w.WriteHeader(http.StatusForbidden)
 		io.WriteString(w, "Invalid resource path\n")
-		return		
+		return
 	}
 
 	switch req.Method {

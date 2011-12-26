@@ -13,7 +13,7 @@ import (
 func digest(data string) string {
 	hash := crypto.SHA256.New()
 	if _, err := hash.Write([]byte(data)); err != nil {
-		panic("Writing to a hash should never fail");
+		panic("Writing to a hash should never fail")
 	}
 	return hex.EncodeToString(hash.Sum())
 }
@@ -48,10 +48,10 @@ func TestServer(t *testing.T) {
 	server := httptest.NewServer(NewHandler())
 	defer server.Close()
 
-        // Define our data and where to put it.
-        data := "Testing!"
-        hash := digest(data)
-        url := server.URL + "/" + hash
+	// Define our data and where to put it.
+	data := "Testing!"
+	hash := digest(data)
+	url := server.URL + "/" + hash
 
 	// PUT our data to the server.
 	client := new(http.Client)
@@ -60,11 +60,11 @@ func TestServer(t *testing.T) {
 		t.Fatalf("Can't build HTTP request: %s", err)
 	}
 	resp, err := client.Do(req)
-        if err != nil {
+	if err != nil {
 		t.Fatalf("Can't PUT data: %s", err)
 	}
-        defer resp.Body.Close()
-        if resp.StatusCode != http.StatusCreated {
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Unexpected HTTP response: %s", resp.Status)
 	}
 
