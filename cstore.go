@@ -17,7 +17,7 @@ var (
 
 // Our server state.
 type handler struct {
-	locker  sync.Locker       // Must be held to access content.
+	locker  sync.RWMutex      // Must be held to access content.
 	content map[string][]byte // Maps SHA256 digest to content.
 }
 
@@ -31,8 +31,8 @@ func (h *handler) setContent(digest string, content []byte) {
 // Safely fetch content from our hash table.  Return nil if we don't have
 // any content for the specified digest.
 func (h *handler) getContent(digest string) []byte {
-	h.locker.Lock()
-	defer h.locker.Unlock()
+	h.locker.RLock()
+	defer h.locker.RUnlock()
 	return h.content[digest]
 }
 
@@ -98,7 +98,6 @@ func (h *handler) servePUT(digest string, w http.ResponseWriter, req *http.Reque
 
 func NewHandler() http.Handler {
 	handler := new(handler)
-	handler.locker = new(sync.Mutex)
 	handler.content = make(map[string][]byte)
 	return handler
 }
