@@ -1,8 +1,6 @@
 package cstore
 
 import (
-	"crypto"
-	"encoding/hex"
 	"http"
 	"http/httptest"
 	"io/ioutil"
@@ -10,20 +8,6 @@ import (
 	"strings"
 	"testing"
 )
-
-func digest(data string) string {
-	hash := crypto.SHA256.New()
-	if _, err := hash.Write([]byte(data)); err != nil {
-		panic("Writing to a hash should never fail")
-	}
-	return hex.EncodeToString(hash.Sum())
-}
-
-func assertStringsEqual(t *testing.T, expected, got string) {
-	if expected != got {
-		t.Errorf("Expected %#v, got %#v", expected, got)
-	}
-}
 
 func assertResponseBody(t *testing.T, expected string, r *http.Response) {
 	body, err := ioutil.ReadAll(r.Body)
@@ -85,7 +69,7 @@ func TestServer(t *testing.T) {
 
 	// Define our data and where to put it.
 	data := "Testing!"
-	hash := digest(data)
+	hash := Digest(data)
 	url := server.URL + "/" + hash
 
 	client := new(http.Client)
@@ -104,4 +88,7 @@ func TestServer(t *testing.T) {
 
 	// Make sure it returns something when called.
 	assertHttpGet(t, client, data, url)
+
+	// PUT data to the wrong SHA256 sum.
+	assertHttpPutStatus(t, client, http.StatusBadRequest, url, "Bogus data")
 }

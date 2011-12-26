@@ -85,13 +85,18 @@ func (h *handler) serveGET(digest string, w http.ResponseWriter, req *http.Reque
 
 // Attempt to store a new blob.
 func (h *handler) servePUT(digest string, w http.ResponseWriter, req *http.Request) {
-	content, err := ioutil.ReadAll(req.Body)
+	dr := NewDigestReader(req.Body)
+	content, err := ioutil.ReadAll(dr)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintln(w, "Could not read payload")
 		return
 	}
-	// TODO: Check digest.
+	if (digest != dr.Digest()) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintln(w, "SHA256 digest does not match content!")
+		return
+	}
 	h.setContent(digest, content)
 	w.WriteHeader(http.StatusCreated)
 }
