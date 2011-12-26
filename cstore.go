@@ -35,7 +35,7 @@ func (h *handler) getContent(digest string) []byte {
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	log.Println("Handling", req.Method, req.URL.Path)
+	log.Println(req.Method, req.URL.Path)
 	match := url_regexp.FindStringSubmatch(req.URL.Path)
 	if match == nil {
 		w.WriteHeader(http.StatusForbidden)
@@ -57,7 +57,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		if _, err := w.Write(content); err != nil {
-			// TODO: Log write failure.
+			log.Println("Error writing response:", err)
 			return
 		}
 	case "PUT":
