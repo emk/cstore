@@ -21,7 +21,7 @@ func Digest(data string) string {
 // on the data as it is read.
 type DigestReader struct {
 	nested io.Reader
-	hash hash.Hash
+	hash   hash.Hash
 }
 
 // Create a new DigestReader wrapping the specified reader.

@@ -13,7 +13,7 @@ func assertStringsEqual(t *testing.T, expected, got string) {
 func assertStringSlicesEqual(t *testing.T, expected, got []string) {
 	match := false
 	if len(expected) == len(got) {
-		for i := range(expected) {
+		for i := range expected {
 			if expected[i] != got[i] {
 				break
 			}

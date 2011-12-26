@@ -92,7 +92,7 @@ func (h *handler) servePUT(digest string, w http.ResponseWriter, req *http.Reque
 		fmt.Fprintln(w, "Could not read payload")
 		return
 	}
-	if (digest != dr.Digest()) {
+	if digest != dr.Digest() {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintln(w, "SHA256 digest does not match content!")
 		return

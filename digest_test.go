@@ -20,4 +20,3 @@ func TestHashingReader(t *testing.T) {
 	assertStringsEqual(t, "Test.", string(out))
 	assertStringsEqual(t, Digest("Test."), r.Digest())
 }
-
