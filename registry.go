@@ -28,3 +28,12 @@ func (r *Registry) FindServers(digest string) (servers []string, err os.Error) {
 	sort.Sort(sort.StringSlice(servers))
 	return
 }
+
+func (r *Registry) FindOneServer(digest string) (server string, err os.Error) {
+	elem, err := r.client.Srandmember(digest)
+	if err != nil {
+		return
+	}
+	server = elem.String()
+	return
+}
