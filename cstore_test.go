@@ -6,6 +6,7 @@ import (
 	"http"
 	"http/httptest"
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 )
@@ -33,7 +34,7 @@ func assertResponseBody(t *testing.T, expected string, r *http.Response) {
 	assertStringsEqual(t, expected, string(body))
 }
 
-func assertHttpStatus(t *testing.T, client *http.Client, code int, url string) {
+func assertHttpGetStatus(t *testing.T, client *http.Client, code int, url string) {
 	r, err := client.Get(url)
 	if err != nil {
 		t.Errorf("Can't GET %v: %v", url, err)
@@ -55,6 +56,28 @@ func assertHttpGet(t *testing.T, client *http.Client, expected, url string) {
 	assertResponseBody(t, expected, r)
 }
 
+// Send an HTTP PUT request.  The caller is responsible for calling
+// resp.Body.Close().
+func put(client *http.Client, url, data string) (resp *http.Response, err os.Error) {
+	req, err := http.NewRequest("PUT", url, strings.NewReader(data))
+	if err != nil {
+		return
+	}
+	resp, err = client.Do(req)
+	return
+}
+
+func assertHttpPutStatus(t *testing.T, client *http.Client, code int, url, data string) {
+	resp, err := put(client, url, data)
+	if err != nil {
+		t.Fatalf("Can't PUT data: %s", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != code {
+		t.Fatalf("Unexpected HTTP response: %s", resp.Status)
+	}
+}
+
 func TestServer(t *testing.T) {
 	// Create a new server.
 	server := httptest.NewServer(NewHandler())
@@ -68,25 +91,14 @@ func TestServer(t *testing.T) {
 	client := new(http.Client)
 
 	// GET serveral invalid URLs.
-	assertHttpStatus(t, client, http.StatusForbidden, server.URL+"/foo")
-	assertHttpStatus(t, client, http.StatusForbidden, server.URL+"/---")
+	assertHttpGetStatus(t, client, http.StatusForbidden, server.URL+"/foo")
+	assertHttpGetStatus(t, client, http.StatusForbidden, server.URL+"/---")
 
 	// GET an unknown digest.
-	assertHttpStatus(t, client, http.StatusNotFound, url)
+	assertHttpGetStatus(t, client, http.StatusNotFound, url)
 
 	// PUT our data to the server.
-	req, err := http.NewRequest("PUT", url, strings.NewReader(data))
-	if err != nil {
-		t.Fatalf("Can't build HTTP request: %s", err)
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatalf("Can't PUT data: %s", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusCreated {
-		t.Fatalf("Unexpected HTTP response: %s", resp.Status)
-	}
+	assertHttpPutStatus(t, client, http.StatusCreated, url, data)
 
 	// TODO: Test partial writes followed by dropped connections.
 
