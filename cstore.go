@@ -1,10 +1,11 @@
 package cstore
 
 import (
+	"fmt"
 	"http"
-	"io"
 	"io/ioutil"
 	"log"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -14,9 +15,10 @@ var (
 	url_regexp = regexp.MustCompile("^/([0-9a-f]*)$")
 )
 
+// Our server state.
 type handler struct {
-	content map[string][]byte
-	locker  sync.Locker
+	locker  sync.Locker       // Must be held to access content.
+	content map[string][]byte // Maps SHA256 digest to content.
 }
 
 // Safely store content in our hash table.
@@ -34,45 +36,64 @@ func (h *handler) getContent(digest string) []byte {
 	return h.content[digest]
 }
 
+// Read and write content via HTTP.
 func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	log.Println(req.Method, req.URL.Path)
-	match := url_regexp.FindStringSubmatch(req.URL.Path)
-	if match == nil {
+
+	// Extract the SHA digest from our URL.
+	digest, err := parseUrlPath(req.URL.Path)
+	if err != nil {
 		w.WriteHeader(http.StatusForbidden)
-		io.WriteString(w, "Invalid resource path\n")
-		return
-	}
-	digest := strings.ToLower(match[1])
-	if len(digest) != 64 {
-		w.WriteHeader(http.StatusForbidden)
-		io.WriteString(w, "Invalid resource path\n")
+		fmt.Fprintln(w, err)
 		return
 	}
 
 	switch req.Method {
 	case "GET":
-		content := h.getContent(digest)
-		if content == nil {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		if _, err := w.Write(content); err != nil {
-			log.Println("Error writing response:", err)
-			return
-		}
+		h.serveGET(digest, w, req)
 	case "PUT":
-		content, err := ioutil.ReadAll(req.Body)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			io.WriteString(w, "Could not read payload\n")
-			return
-		}
-		// TODO: Check digest.
-		h.setContent(digest, content)
-		w.WriteHeader(http.StatusCreated)
+		h.servePUT(digest, w, req)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
+}
+
+// Parse a URL path.  We expect all paths to be "/" followed by an SHA256
+// sum.  (We may add support for a bare "/" if we add POST support.)
+func parseUrlPath(path string) (digest string, err os.Error) {
+	match := url_regexp.FindStringSubmatch(path)
+	if match == nil || len(match[1]) != 64 {
+		err = os.NewError("Invalid resource path")
+		return
+	}
+	digest = strings.ToLower(match[1])
+	return
+}
+
+// Attempt to fetch a stored blob.
+func (h *handler) serveGET(digest string, w http.ResponseWriter, req *http.Request) {
+	content := h.getContent(digest)
+	if content == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if _, err := w.Write(content); err != nil {
+		log.Println("Error writing response:", err)
+		return
+	}
+}
+
+// Attempt to store a new blob.
+func (h *handler) servePUT(digest string, w http.ResponseWriter, req *http.Request) {
+	content, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintln(w, "Could not read payload")
+		return
+	}
+	// TODO: Check digest.
+	h.setContent(digest, content)
+	w.WriteHeader(http.StatusCreated)
 }
 
 func NewHandler() http.Handler {
