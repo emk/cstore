@@ -20,7 +20,7 @@ func digest(data string) string {
 
 func assertStringsEqual(t *testing.T, expected, got string) {
 	if expected != got {
-		t.Errorf("Expected %v, got %v", expected, got)
+		t.Errorf("Expected %#v, got %#v", expected, got)
 	}
 }
 
@@ -33,10 +33,22 @@ func assertResponseBody(t *testing.T, expected string, r *http.Response) {
 	assertStringsEqual(t, expected, string(body))
 }
 
+func assertHttpStatus(t *testing.T, client *http.Client, code int, url string) {
+	r, err := client.Get(url)
+	if err != nil {
+		t.Errorf("Can't GET %v: %v", url, err)
+		return
+	}
+	defer r.Body.Close()
+	if r.StatusCode != code {
+		t.Errorf("Expected status %v, got %v", code, r.Status)
+	}
+}
+
 func assertHttpGet(t *testing.T, client *http.Client, expected, url string) {
 	r, err := client.Get(url)
 	if err != nil {
-		t.Errorf("Can't GET %s: %v", url, err)
+		t.Errorf("Can't GET %v: %v", url, err)
 		return
 	}
 	defer r.Body.Close()
@@ -53,8 +65,16 @@ func TestServer(t *testing.T) {
 	hash := digest(data)
 	url := server.URL + "/" + hash
 
-	// PUT our data to the server.
 	client := new(http.Client)
+
+	// GET serveral invalid URLs.
+	assertHttpStatus(t, client, http.StatusForbidden, server.URL+"/foo")
+	assertHttpStatus(t, client, http.StatusForbidden, server.URL+"/---")
+
+	// GET an unknown digest.
+	assertHttpStatus(t, client, http.StatusNotFound, url)
+
+	// PUT our data to the server.
 	req, err := http.NewRequest("PUT", url, strings.NewReader(data))
 	if err != nil {
 		t.Fatalf("Can't build HTTP request: %s", err)
@@ -67,6 +87,8 @@ func TestServer(t *testing.T) {
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("Unexpected HTTP response: %s", resp.Status)
 	}
+
+	// TODO: Test partial writes followed by dropped connections.
 
 	// Make sure it returns something when called.
 	assertHttpGet(t, client, data, url)
