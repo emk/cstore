@@ -3,12 +3,14 @@ package cstore
 import (
 	"fmt"
 	"http"
+	"http/httptest"
 	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
 	"strings"
 	"sync"
+	"url"
 )
 
 var (
@@ -19,6 +21,10 @@ var (
 type handler struct {
 	locker  sync.RWMutex      // Must be held to access content.
 	content map[string][]byte // Maps SHA256 digest to content.
+
+	hostname string       // A name which can be used to access this server.
+	registry *Registry    // Used to find server with content.
+	client   *http.Client // Used for recursive calls.
 }
 
 // Safely store content in our hash table.
@@ -26,6 +32,15 @@ func (h *handler) setContent(digest string, content []byte) {
 	h.locker.Lock()
 	defer h.locker.Unlock()
 	h.content[digest] = content
+}
+
+// Store content in our hash table and let everybody know we have it.
+func (h *handler) setContentAndRegister(digest string, content []byte) {
+	h.setContent(digest, content)
+	log.Printf("Registering %s for %s", h.hostname, digest)
+	if err := h.registry.RegisterServer(digest, h.hostname); err != nil {
+		log.Println("Unable to register", digest)
+	}
 }
 
 // Safely fetch content from our hash table.  Return nil if we don't have
@@ -74,13 +89,47 @@ func parseUrlPath(path string) (digest string, err os.Error) {
 func (h *handler) serveGET(digest string, w http.ResponseWriter, req *http.Request) {
 	content := h.getContent(digest)
 	if content == nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
+		content = h.tryRecursiveGET(digest)
+		if content == nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
 	}
 	if _, err := w.Write(content); err != nil {
 		log.Println("Error writing response:", err)
 		return
 	}
+}
+
+// Attempt to GET the specified digest from another server.
+// TODO: Think hard about error conditions here.
+func (h *handler) tryRecursiveGET(digest string) (content []byte) {
+	server, err := h.registry.FindOneServer(digest)
+	if err != nil {
+		log.Println("Error checking registry:", err)
+		return nil
+	}
+	if server == "" {
+		log.Println("Can't find server with digest:", digest)
+		return nil
+	}
+	resp, err := h.client.Get("http://" + server + "/" + digest)
+	if err != nil {
+		log.Println("Error fetching data:", err)
+		return nil
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		log.Println("Error fetching data:", resp.Status)
+		return nil
+	}
+	content, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("Error fetching data:", err)
+		return nil
+	}
+	h.setContentAndRegister(digest, content)
+	return
 }
 
 // Attempt to store a new blob.
@@ -97,12 +146,28 @@ func (h *handler) servePUT(digest string, w http.ResponseWriter, req *http.Reque
 		fmt.Fprintln(w, "SHA256 digest does not match content!")
 		return
 	}
-	h.setContent(digest, content)
+	h.setContentAndRegister(digest, content)
 	w.WriteHeader(http.StatusCreated)
 }
 
-func NewHandler() http.Handler {
+func newHandler() *handler {
 	handler := new(handler)
 	handler.content = make(map[string][]byte)
+	handler.registry = NewRegistry()
+	handler.client = new(http.Client)
 	return handler
+}
+
+// Create a new server for use in unit tests.  When done, be sure to call
+// Close().
+func NewTestServer() *httptest.Server {
+	handler := newHandler()
+	server := httptest.NewServer(handler)
+
+	url, err := url.Parse(server.URL)
+	if err != nil {
+		panic(err)
+	}
+	handler.hostname = url.Host
+	return server
 }

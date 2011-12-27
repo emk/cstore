@@ -3,10 +3,11 @@ package cstore
 import (
 	"godis"
 	"os"
-	"sort"
+	"sync"
 )
 
 type Registry struct {
+	locker sync.Mutex
 	client *godis.Client
 }
 
@@ -15,25 +16,29 @@ func NewRegistry() *Registry {
 }
 
 func (r *Registry) RegisterServer(digest, hostname string) (err os.Error) {
+	r.locker.Lock()
+	defer r.locker.Unlock()
+
 	_, err = r.client.Sadd(digest, hostname)
 	return
 }
 
-func (r *Registry) FindServers(digest string) (servers []string, err os.Error) {
-	reply, err := r.client.Smembers(digest)
-	if err != nil {
-		return
-	}
-	servers = reply.StringArray()
-	sort.Sort(sort.StringSlice(servers))
-	return
-}
-
 func (r *Registry) FindOneServer(digest string) (server string, err os.Error) {
+	r.locker.Lock()
+	defer r.locker.Unlock()
+
 	elem, err := r.client.Srandmember(digest)
 	if err != nil {
 		return
 	}
 	server = elem.String()
+	return
+}
+
+func (r *Registry) ClearServers(digest string) (err os.Error) {
+	r.locker.Lock()
+	defer r.locker.Unlock()
+
+	_, err = r.client.Del(digest)
 	return
 }

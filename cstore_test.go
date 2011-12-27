@@ -2,7 +2,6 @@ package cstore
 
 import (
 	"http"
-	"http/httptest"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -37,6 +36,10 @@ func assertHttpGet(t *testing.T, client *http.Client, expected, url string) {
 		return
 	}
 	defer r.Body.Close()
+	if r.StatusCode != http.StatusOK {
+		t.Errorf("Unexpected HTTP status: %v", r.Status)
+		return
+	}
 	assertResponseBody(t, expected, r)
 }
 
@@ -64,13 +67,14 @@ func assertHttpPutStatus(t *testing.T, client *http.Client, code int, url, data 
 
 func TestServer(t *testing.T) {
 	// Create a new server.
-	server := httptest.NewServer(NewHandler())
+	server := NewTestServer()
 	defer server.Close()
 
 	// Define our data and where to put it.
 	data := "Testing!"
 	hash := Digest(data)
 	url := server.URL + "/" + hash
+	clearRegistryForTest(t, NewRegistry(), hash)
 
 	client := new(http.Client)
 
@@ -92,4 +96,25 @@ func TestServer(t *testing.T) {
 
 	// PUT data to the wrong SHA256 sum.
 	assertHttpPutStatus(t, client, http.StatusBadRequest, url, "Bogus data")
+}
+
+func TestReplication(t *testing.T) {
+	// Create two servers.
+	server1 := NewTestServer()
+	defer server1.Close()
+	server2 := NewTestServer()
+	defer server2.Close()
+
+	// Define our data and where to put it.
+	data := "Testing!"
+	hash := Digest(data)
+	url1 := server1.URL + "/" + hash
+	url2 := server2.URL + "/" + hash
+	clearRegistryForTest(t, NewRegistry(), hash)
+
+	client := new(http.Client)
+
+	// Store the data on one server, and read it back on another.
+	assertHttpPutStatus(t, client, http.StatusCreated, url1, data)
+	assertHttpGet(t, client, data, url2)
 }

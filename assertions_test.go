@@ -4,6 +4,12 @@ import (
 	"testing"
 )
 
+func clearRegistryForTest(t *testing.T, r *Registry, digest string) {
+	if err := r.ClearServers(digest); err != nil {
+		t.Fatal("Can't clear Redis keys:", err)
+	}
+}
+
 func assertStringsEqual(t *testing.T, expected, got string) {
 	if expected != got {
 		t.Errorf("Expected %#v, got %#v", expected, got)
