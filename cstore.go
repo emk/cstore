@@ -1,4 +1,4 @@
-package cstore
+package main
 
 import (
 	"fmt"
@@ -170,4 +170,13 @@ func NewTestServer() *httptest.Server {
 	}
 	handler.hostname = url.Host
 	return server
+}
+
+// Listen and serve on the specified interface and port.  Does not return.
+func ListenAndServe(addr string) {
+	handler := newHandler()
+	handler.hostname = addr
+	if err := http.ListenAndServe(addr, handler); err != nil {
+		log.Fatal("Can't start server:", err)
+	}
 }

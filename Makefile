@@ -5,5 +5,6 @@ GOFILES=\
 	digest.go\
 	registry.go\
 	cstore.go\
+	main.go\
 
-include $(GOROOT)/src/Make.pkg
+include $(GOROOT)/src/Make.cmd

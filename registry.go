@@ -1,4 +1,4 @@
-package cstore
+package main
 
 import (
 	"godis"
