@@ -7,19 +7,20 @@ import (
 )
 
 type Registry struct {
-	locker sync.Mutex
-	client *godis.Client
+	hostname string
+	locker   sync.Mutex
+	client   *godis.Client
 }
 
-func NewRegistry() *Registry {
-	return &Registry{client: godis.New("", 0, "")}
+func NewRegistry(hostname string) *Registry {
+	return &Registry{hostname: hostname, client: godis.New("", 0, "")}
 }
 
-func (r *Registry) RegisterServer(digest, hostname string) (err os.Error) {
+func (r *Registry) RegisterServer(digest string) (err os.Error) {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 
-	_, err = r.client.Sadd(digest, hostname)
+	_, err = r.client.Sadd(digest, r.hostname)
 	return
 }
 

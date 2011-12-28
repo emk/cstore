@@ -22,7 +22,6 @@ type handler struct {
 	locker  sync.RWMutex      // Must be held to access content.
 	content map[string][]byte // Maps SHA256 digest to content.
 
-	hostname string       // A name which can be used to access this server.
 	registry *Registry    // Used to find server with content.
 	client   *http.Client // Used for recursive calls.
 }
@@ -37,8 +36,7 @@ func (h *handler) setContent(digest string, content []byte) {
 // Store content in our hash table and let everybody know we have it.
 func (h *handler) setContentAndRegister(digest string, content []byte) {
 	h.setContent(digest, content)
-	log.Printf("Registering %s for %s", h.hostname, digest)
-	if err := h.registry.RegisterServer(digest, h.hostname); err != nil {
+	if err := h.registry.RegisterServer(digest); err != nil {
 		log.Println("Unable to register", digest)
 	}
 }
@@ -153,7 +151,6 @@ func (h *handler) servePUT(digest string, w http.ResponseWriter, req *http.Reque
 func newHandler() *handler {
 	handler := new(handler)
 	handler.content = make(map[string][]byte)
-	handler.registry = NewRegistry()
 	handler.client = new(http.Client)
 	return handler
 }
@@ -168,14 +165,14 @@ func NewTestServer() *httptest.Server {
 	if err != nil {
 		panic(err)
 	}
-	handler.hostname = url.Host
+	handler.registry = NewRegistry(url.Host)
 	return server
 }
 
 // Listen and serve on the specified interface and port.  Does not return.
 func ListenAndServe(addr string) {
 	handler := newHandler()
-	handler.hostname = addr
+	handler.registry = NewRegistry(addr)
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatal("Can't start server:", err)
 	}
