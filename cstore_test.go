@@ -102,21 +102,29 @@ func TestSingleServer(t *testing.T) {
 func TestReplication(t *testing.T) {
 	clearRegistryForTest(t)
 
-	// Create two servers.
+	// Create three servers.
 	server1 := NewTestServer()
 	defer server1.Close()
 	server2 := NewTestServer()
-	defer server2.Close()
+	defer func () { if server2 != nil { server2.Close() } }()
+	server3 := NewTestServer()
+	defer server3.Close()
 
 	// Define our data and where to put it.
 	data := "Testing!"
 	hash := Digest(data)
 	url1 := server1.URL() + "/" + hash
 	url2 := server2.URL() + "/" + hash
+	url3 := server3.URL() + "/" + hash
 
 	client := new(http.Client)
 
 	// Store the data on one server, and read it back on another.
 	assertHttpPutStatus(t, client, http.StatusCreated, url1, data)
 	assertHttpGet(t, client, data, url2)
+
+	// Shut down one of our servers and replicate again.
+	server2.Close()
+	server2 = nil
+	assertHttpGet(t, client, data, url3)
 }

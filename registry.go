@@ -109,22 +109,45 @@ func (r *Registry) RegisterDigest(digest string) (err os.Error) {
 	return
 }
 
-// Find one server which _should_ have the specified digest.
-func (r *Registry) FindOneServer(digest string) (server string, err os.Error) {
+// Return a list of servers which _should_ have the specified digest.
+func (r *Registry) FindServers(digest string) (servers []string, err os.Error) {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 
-	elem, err := r.client.Srandmember("cstore:blob:" + digest)
+	// Look up the IDs of the servers which have this digest.
+	reply, err := r.client.Smembers("cstore:blob:" + digest)
 	if err != nil {
 		return
 	}
+	ids := reply.StringArray()
 
-	reply := godis.SendStr(r.client, "GET", serverKey(elem.String()))
-	if reply.Err != nil {
-		err = reply.Err
+	// We can't call Mget unless we have at least one key.
+	if len(ids) == 0 {
+		servers = make([]string, 0)
 		return
 	}
-	server = reply.Elem.String()
+
+	// Build a list of server keys.
+	serverKeys := make([]string, 0, len(ids))
+	for _, id := range ids {
+		serverKeys = append(serverKeys, serverKey(id))
+	}
+
+	// Look up our server addresses.
+	reply, err = r.client.Mget(serverKeys...)
+	if err != nil {
+		return
+	}
+	rawServers := reply.StringArray()
+
+	// Filter out blank addresses, which presumably belong to dead
+	// servers.
+	servers = make([]string, 0, len(rawServers))
+	for _, server := range rawServers {
+		if server != "" {
+			servers = append(servers, server)
+		}
+	}
 	return
 }
 

@@ -102,16 +102,16 @@ func (h *handler) serveGET(digest string, w http.ResponseWriter, req *http.Reque
 // Attempt to GET the specified digest from another server.
 // TODO: Think hard about error conditions here.
 func (h *handler) tryRecursiveGET(digest string) (content []byte) {
-	server, err := h.registry.FindOneServer(digest)
+	servers, err := h.registry.FindServers(digest)
 	if err != nil {
 		log.Println("Error checking registry:", err)
 		return nil
 	}
-	if server == "" {
+	if len(servers) == 0 {
 		log.Println("Can't find server with digest:", digest)
 		return nil
 	}
-	resp, err := h.client.Get("http://" + server + "/" + digest)
+	resp, err := h.client.Get("http://" + servers[0] + "/" + digest)
 	if err != nil {
 		log.Println("Error fetching data:", err)
 		return nil

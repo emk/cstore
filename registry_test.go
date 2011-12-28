@@ -32,20 +32,17 @@ func TestRegistry(t *testing.T) {
 	assertRegisterDigest(t, r2, digest)
 
 	// Get a random server holding a specific digest.
-	server, err := r1.FindOneServer(digest)
+	servers, err := r1.FindServers(digest)
 	if err != nil {
-		t.Fatal("Can't find server:", err)
+		t.Fatal("Can't find servers:", err)
 	}
-	if server != "s1.example.com" && server != "s2.example.com" {
-		t.Error("Unexpected server value:", server)
-	}
+	assertStringSlicesEqual(t, []string{"s2.example.com", "s1.example.com"},
+		servers)
 
 	// Ask for a random server when none is registered.
-	server, err = r1.FindOneServer(unknown_digest)
+	servers, err = r1.FindServers(unknown_digest)
 	if err != nil {
 		t.Error("Unexpected error:", err)
 	}
-	if server != "" {
-		t.Error("Did not expect to find server:", server)
-	}
+	assertStringSlicesEqual(t, []string{}, servers)
 }
