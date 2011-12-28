@@ -4,9 +4,9 @@ import (
 	"testing"
 )
 
-func clearRegistryForTest(t *testing.T, r *Registry, digest string) {
-	if err := r.ClearServers(digest); err != nil {
-		t.Fatal("Can't clear Redis keys:", err)
+func clearRegistryForTest(t *testing.T, r *Registry) {
+	if err := r.ClearForTest(); err != nil {
+		t.Fatal("Can't clear Redis:", err)
 	}
 }
 

@@ -69,12 +69,12 @@ func TestServer(t *testing.T) {
 	// Create a new server.
 	server := NewTestServer()
 	defer server.Close()
+	clearRegistryForTest(t, NewRegistry("test.example.com"))
 
 	// Define our data and where to put it.
 	data := "Testing!"
 	hash := Digest(data)
 	url := server.URL + "/" + hash
-	clearRegistryForTest(t, NewRegistry("test.example.com"), hash)
 
 	client := new(http.Client)
 
@@ -104,13 +104,13 @@ func TestReplication(t *testing.T) {
 	defer server1.Close()
 	server2 := NewTestServer()
 	defer server2.Close()
+	clearRegistryForTest(t, NewRegistry("test.example.com"))
 
 	// Define our data and where to put it.
 	data := "Testing!"
 	hash := Digest(data)
 	url1 := server1.URL + "/" + hash
 	url2 := server2.URL + "/" + hash
-	clearRegistryForTest(t, NewRegistry("test.example.com"), hash)
 
 	client := new(http.Client)
 

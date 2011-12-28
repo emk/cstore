@@ -11,13 +11,13 @@ func assertRegisterServer(t *testing.T, r *Registry, digest string) {
 }
 
 func TestRegistry(t *testing.T) {
-	digest := Digest("Test.")
-	unknown_digest := Digest("Unknown")
 	r1 := NewRegistry("s1.example.com")
 	r2 := NewRegistry("s2.example.com")
-	clearRegistryForTest(t, r1, digest)
+	clearRegistryForTest(t, r1)
 
 	// Register two servers as owning a digest.
+	digest := Digest("Test.")
+	unknown_digest := Digest("Unknown")
 	assertRegisterServer(t, r1, digest)
 	assertRegisterServer(t, r2, digest)
 

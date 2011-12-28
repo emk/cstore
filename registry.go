@@ -20,7 +20,7 @@ func (r *Registry) RegisterServer(digest string) (err os.Error) {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 
-	_, err = r.client.Sadd(digest, r.hostname)
+	_, err = r.client.Sadd("cstore:blob:" + digest, r.hostname)
 	return
 }
 
@@ -28,7 +28,7 @@ func (r *Registry) FindOneServer(digest string) (server string, err os.Error) {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 
-	elem, err := r.client.Srandmember(digest)
+	elem, err := r.client.Srandmember("cstore:blob:" + digest)
 	if err != nil {
 		return
 	}
@@ -36,10 +36,19 @@ func (r *Registry) FindOneServer(digest string) (server string, err os.Error) {
 	return
 }
 
-func (r *Registry) ClearServers(digest string) (err os.Error) {
+func (r *Registry) ClearForTest() (err os.Error) {
 	r.locker.Lock()
 	defer r.locker.Unlock()
 
-	_, err = r.client.Del(digest)
+	keys, err := r.client.Keys("cstore:*")
+	if err != nil {
+		return 
+	}
+	for _, k := range(keys) {
+		_, err = r.client.Del(k)
+		if err != nil {
+			return
+		}
+	}
 	return
 }
