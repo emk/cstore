@@ -120,19 +120,18 @@ func (h *handler) tryRecursiveGET(digest string) (content []byte) {
 	return nil
 }
 
+// Try fetching a single URL.
 func (h *handler) tryGET(url string) (content []byte, err os.Error) {
 	resp, err := h.client.Get(url)
 	if err != nil {
-		log.Println("Error fetching data:", err)
 		return
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		log.Println("Error fetching data:", resp.Status)
+		err = os.NewError("Error fetching data: " + resp.Status)
 		return
 	}
-	content, err = ioutil.ReadAll(resp.Body)
-	return
+	return ioutil.ReadAll(resp.Body)
 }
 
 // Attempt to store a new blob.
