@@ -1,6 +1,8 @@
 ## cstore
 
-**Warning: This is a random toy, not a production-ready library.**
+**Warning: This is a random toy, not a production-ready service.  It will
+eat your data.  It stores all data in RAM, and uses the same Redis backend
+for unit tests and standalone servers.  This repository may go away.**
 
 The `cstore` server is a distributed, content-based storage system.  Like
 `git`, it stores binary blobs indexed by cryptographic hash codes.  The
@@ -27,6 +29,12 @@ add a file to the store:
 ...and fetch it from the other store:
 
     curl "http://localhost:12346/$HASH"
+
+### How it works
+
+See REDIS.md for a description of how the servers communicate.
+
+### Future ideas
 
 In the future, I might add support for POST:
 
