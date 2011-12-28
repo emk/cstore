@@ -4,22 +4,32 @@ import (
 	"testing"
 )
 
-func assertRegisterServer(t *testing.T, r *Registry, digest string) {
-	if err := r.RegisterServer(digest); err != nil {
+func assertNewRegistry(t *testing.T, hostname string) *Registry {
+	r := NewRegistry()
+	if err := r.RegisterThisServer(hostname); err != nil {
+		t.Fatal("Error registering server:", err)
+	}
+	return r
+}
+
+func assertRegisterDigest(t *testing.T, r *Registry, digest string) {
+	if err := r.RegisterDigest(digest); err != nil {
 		t.Error("Error registering digest:", err)
 	}
 }
 
 func TestRegistry(t *testing.T) {
-	r1 := NewRegistry("s1.example.com")
-	r2 := NewRegistry("s2.example.com")
-	clearRegistryForTest(t, r1)
+	clearRegistryForTest(t)
+	r1 := assertNewRegistry(t, "s1.example.com")
+	defer r1.UnregisterThisServer()
+	r2 := assertNewRegistry(t, "s2.example.com")
+	defer r2.UnregisterThisServer()
 
 	// Register two servers as owning a digest.
 	digest := Digest("Test.")
 	unknown_digest := Digest("Unknown")
-	assertRegisterServer(t, r1, digest)
-	assertRegisterServer(t, r2, digest)
+	assertRegisterDigest(t, r1, digest)
+	assertRegisterDigest(t, r2, digest)
 
 	// Get a random server holding a specific digest.
 	server, err := r1.FindOneServer(digest)

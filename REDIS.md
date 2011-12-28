@@ -6,7 +6,7 @@ All keys go in the namespace `cstore:` to prevent collisions.
 
 ## Heartbeat
 
-    SETX cstore:addr:$id 20 $host_and_port
+    SETX cstore:server:$id 20 $host_and_port
 
 ## Registering a blob
 
@@ -15,6 +15,6 @@ All keys go in the namespace `cstore:` to prevent collisions.
 ## Finding a blob
 
     ids = SMEMBERS cstore:blob:$digest
-    addrs = MGET cstore:addr:$ids[N]...
+    addrs = MGET cstore:server:$ids[N]...
 
 Try http://$addr[N]/$digest in sequence until we get a hit.

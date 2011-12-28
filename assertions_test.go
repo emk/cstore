@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-func clearRegistryForTest(t *testing.T, r *Registry) {
-	if err := r.ClearForTest(); err != nil {
+func clearRegistryForTest(t *testing.T) {
+	if err := NewRegistry().ClearForTest(); err != nil {
 		t.Fatal("Can't clear Redis:", err)
 	}
 }

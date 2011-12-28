@@ -65,23 +65,24 @@ func assertHttpPutStatus(t *testing.T, client *http.Client, code int, url, data 
 	}
 }
 
-func TestServer(t *testing.T) {
+func TestSingleServer(t *testing.T) {
+	clearRegistryForTest(t)
+
 	// Create a new server.
 	server := NewTestServer()
 	defer server.Close()
-	clearRegistryForTest(t, NewRegistry("test.example.com"))
 
 	// Define our data and where to put it.
 	data := "Testing!"
 	hash := Digest(data)
-	url := server.URL + "/" + hash
+	url := server.URL() + "/" + hash
 
 	client := new(http.Client)
 
 	// GET and PUT serveral invalid URLs.
-	assertHttpGetStatus(t, client, http.StatusForbidden, server.URL+"/foo")
-	assertHttpGetStatus(t, client, http.StatusForbidden, server.URL+"/---")
-	assertHttpPutStatus(t, client, http.StatusForbidden, server.URL+"/foo", "data")
+	assertHttpGetStatus(t, client, http.StatusForbidden, server.URL()+"/f")
+	assertHttpGetStatus(t, client, http.StatusForbidden, server.URL()+"/-")
+	assertHttpPutStatus(t, client, http.StatusForbidden, server.URL()+"/f", "data")
 
 	// GET an unknown digest.
 	assertHttpGetStatus(t, client, http.StatusNotFound, url)
@@ -99,18 +100,19 @@ func TestServer(t *testing.T) {
 }
 
 func TestReplication(t *testing.T) {
+	clearRegistryForTest(t)
+
 	// Create two servers.
 	server1 := NewTestServer()
 	defer server1.Close()
 	server2 := NewTestServer()
 	defer server2.Close()
-	clearRegistryForTest(t, NewRegistry("test.example.com"))
 
 	// Define our data and where to put it.
 	data := "Testing!"
 	hash := Digest(data)
-	url1 := server1.URL + "/" + hash
-	url2 := server2.URL + "/" + hash
+	url1 := server1.URL() + "/" + hash
+	url2 := server2.URL() + "/" + hash
 
 	client := new(http.Client)
 

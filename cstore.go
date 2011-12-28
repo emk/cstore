@@ -36,7 +36,7 @@ func (h *handler) setContent(digest string, content []byte) {
 // Store content in our hash table and let everybody know we have it.
 func (h *handler) setContentAndRegister(digest string, content []byte) {
 	h.setContent(digest, content)
-	if err := h.registry.RegisterServer(digest); err != nil {
+	if err := h.registry.RegisterDigest(digest); err != nil {
 		log.Println("Unable to register", digest)
 	}
 }
@@ -151,13 +151,39 @@ func (h *handler) servePUT(digest string, w http.ResponseWriter, req *http.Reque
 func newHandler() *handler {
 	handler := new(handler)
 	handler.content = make(map[string][]byte)
+	handler.registry = NewRegistry()
 	handler.client = new(http.Client)
 	return handler
 }
 
+// Listen and serve on the specified interface and port.  Does not return.
+func ListenAndServe(addr string) {
+	handler := newHandler()
+	if err := handler.registry.RegisterThisServer(addr); err != nil {
+		log.Fatal("Can't register server with Redis:", err)
+	}
+	if err := http.ListenAndServe(addr, handler); err != nil {
+		log.Fatal("Can't start server:", err)
+	}
+}
+
+type TestServer struct {
+	handler *handler
+	server  *httptest.Server
+}
+
+func (ts *TestServer) URL() string {
+	return ts.server.URL
+}
+
+func (ts *TestServer) Close() {
+	ts.handler.registry.UnregisterThisServer()
+	ts.server.Close()
+}
+
 // Create a new server for use in unit tests.  When done, be sure to call
 // Close().
-func NewTestServer() *httptest.Server {
+func NewTestServer() *TestServer {
 	handler := newHandler()
 	server := httptest.NewServer(handler)
 
@@ -165,15 +191,6 @@ func NewTestServer() *httptest.Server {
 	if err != nil {
 		panic(err)
 	}
-	handler.registry = NewRegistry(url.Host)
-	return server
-}
-
-// Listen and serve on the specified interface and port.  Does not return.
-func ListenAndServe(addr string) {
-	handler := newHandler()
-	handler.registry = NewRegistry(addr)
-	if err := http.ListenAndServe(addr, handler); err != nil {
-		log.Fatal("Can't start server:", err)
-	}
+	handler.registry.RegisterThisServer(url.Host)
+	return &TestServer{handler: handler, server: server}
 }
