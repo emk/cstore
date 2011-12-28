@@ -107,26 +107,31 @@ func (h *handler) tryRecursiveGET(digest string) (content []byte) {
 		log.Println("Error checking registry:", err)
 		return nil
 	}
-	if len(servers) == 0 {
-		log.Println("Can't find server with digest:", digest)
-		return nil
+	for _, server := range(servers) {
+		url := "http://" + server + "/" + digest
+		content, err = h.tryGET(url)
+		if err != nil {
+			log.Printf("Error fetching data:", err)
+		} else {
+			h.setContentAndRegister(digest, content)
+			return
+		}
 	}
-	resp, err := h.client.Get("http://" + servers[0] + "/" + digest)
+	return nil
+}
+
+func (h *handler) tryGET(url string) (content []byte, err os.Error) {
+	resp, err := h.client.Get(url)
 	if err != nil {
 		log.Println("Error fetching data:", err)
-		return nil
+		return
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		log.Println("Error fetching data:", resp.Status)
-		return nil
+		return
 	}
 	content, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Println("Error fetching data:", err)
-		return nil
-	}
-	h.setContentAndRegister(digest, content)
 	return
 }
 
